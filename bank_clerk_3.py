@@ -30,8 +30,15 @@ def bank_clerk(i,queue,set_info,mutex_call,mutex_client,mutex_print,mutex_answer
 		mutex_answer.acquire()
 		mutex_call.release()
 		# calling that customer
+		start_time = time.ctime()
+		set_info.acquire()
+		service_time = client_info.pop(2)
+		client_info.append(start_time)
+		set_info.release()
+		mutex_print.acquire()
 		print "Banker "+str(i)+" is serving client "+str(client_info[0])
-		time.sleep(int(client_info.pop(2)))
+		mutex_print.release()
+		time.sleep(int(service_time))
 		finish_time = time.ctime()
 		set_info.acquire()
 		# down info
@@ -43,15 +50,19 @@ def bank_clerk(i,queue,set_info,mutex_call,mutex_client,mutex_print,mutex_answer
 		print_info(client_info)
 		# print the info to the file by calling the function
 		mutex_print.release()
+		mutex_print.acquire()
 		print "Client "+str(client_info[0])+" service finished."
+		mutex_print.release()
 		
 
-def get_in_line(order,time_come,service_time,queue,set_info,mutex_client,mutex_answer,call_num,check_call):
+def get_in_line(order,time_come,service_time,queue,set_info,mutex_client,mutex_answer,call_num,check_call,mutex_print):
 	client_info = []
 	time.sleep(int(time_come))
 	# time to come
 	start_time = time.ctime()
+	mutex_print.acquire()
 	print "Client "+str(order)+" has come."
+	mutex_print.release()
 	set_info.acquire()
 	# set the info
 	client_info.append(order)
@@ -59,7 +70,9 @@ def get_in_line(order,time_come,service_time,queue,set_info,mutex_client,mutex_a
 	client_info.append(service_time)
 	
 	# geting a number 
+	mutex_print.acquire()
 	print "Client "+str(order)+" is waiting."
+	mutex_print.release()
 	queue.put(client_info)
 	set_info.release()
 	# get the client in the queue, waiting for the banker to call
@@ -94,14 +107,16 @@ def print_info(client_info):
 	f.write('\t')
 	f.write(client_info[2])
 	f.write('\t')
-	f.write(str(client_info[3]))
+	f.write(client_info[3])
+	f.write('\t')
+	f.write(str(client_info[4]))
 	f.write('\n')
 	f.close()
 	# write info to the file
 
 def _init_():
-	n = 3
-	# 3 bank clerks in service
+	n = 9
+	# n bank clerks in service
 	client_queue = read_text() # read data s
 	mutex_call = multiprocessing.Semaphore(value = 1)
 	set_info = multiprocessing.Semaphore(value = 1)
@@ -117,11 +132,13 @@ def _init_():
 	# the queue/waiting line
 	processes = []
 	for i in range(1,n+1):	# this modification let banker starts from 1, not 0.
-		t = multiprocessing.Process(target = bank_clerk,args = (i,queue,set_info,mutex_call,mutex_client,mutex_print,mutex_answer,call_num))
+		t = multiprocessing.Process(target = bank_clerk,
+			args = (i,queue,set_info,mutex_call,mutex_client,mutex_print,mutex_answer,call_num))
 		processes.append(t)
 		# the banker processes
 	for cli in client_queue:
-		t = multiprocessing.Process(target = get_in_line,args = (cli[0],cli[1],cli[2],queue,set_info,mutex_client,mutex_answer,call_num,check_call))
+		t = multiprocessing.Process(target = get_in_line,
+			args = (cli[0],cli[1],cli[2],queue,set_info,mutex_client,mutex_answer,call_num,check_call,mutex_print))
 		processes.append(t)
 		# the client processes
 	return processes
