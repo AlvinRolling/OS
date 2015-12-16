@@ -41,7 +41,14 @@ def bank_clerk(i):
 		client_to_serve = queue.get()
 		# get the client
 		mutex_call.release()
+		start_time = time.ctime()
+		set_info.acquire()
+		service_time = int(client_to_serve[0])
+		client_info[int(client_to_serve[1])-1].append(start_time)
+		set_info.release()
+		mutex_print.acquire()
 		print "Banker "+str(i)+" is serving client "+str(client_to_serve[1])
+		mutex_print.release()
 		time.sleep(int(client_to_serve[0]))
 		finish_time = time.ctime()
 		set_info.acquire()
@@ -55,7 +62,9 @@ def bank_clerk(i):
 		print_info(int(client_to_serve[1])-1)
 		# print the info to the file by calling the function
 		mutex_print.release()
+		mutex_print.acquire()
 		print "Client "+str(client_to_serve[1])+" service finished."
+		mutex_print.release()
 		
 
 def get_in_line(order,time_come,service_time):
@@ -68,12 +77,16 @@ def get_in_line(order,time_come,service_time):
 	client_info[int(order)-1].append(order)
 	client_info[int(order)-1].append(start_time)
 	# set the info
+	mutex_print.acquire()
 	print "Client "+str(order)+" has come."
+	mutex_print.release()
 	set_info.release()
 	mutex_number.acquire()
 	# geting a number 
 	client_come = client_come+1
+	mutex_print.acquire()
 	print "Client "+str(order)+" is waiting."
+	mutex_print.release()
 	mutex_number.release()
 	queue.put([service_time,order])
 	# get the client in the queue, waiting for the banker to call
@@ -86,13 +99,17 @@ def print_info(client_no):
 	global client_info
 	f = open("C:\Users\hp1\Desktop\OS\log.txt","a+")
 	print "printing"
-	f.write(client_info[client_no][0])
+	import pdb
+	pdb.set_trace()
+	f.write(str(client_info[client_no][0]))
 	f.write('\t')
 	f.write(client_info[client_no][1])
 	f.write('\t')
 	f.write(client_info[client_no][2])
 	f.write('\t')
-	f.write(str(client_info[client_no][3]))
+	f.write(client_info[client_no][3])
+	f.write('\t')
+	f.write(str(client_info[client_no][4]))
 	f.write('\n')
 	f.close()
 	# write info to the file
